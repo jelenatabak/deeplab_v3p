@@ -1,0 +1,6 @@
+core/__pycache__/
+
+# capsicum_annuum_dataset
+capricum_annuum_dataset/*
+.vscode/
+__pycache__/
