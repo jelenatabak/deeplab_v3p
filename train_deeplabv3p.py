@@ -6,6 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import backend as K
 
 from core.dataset_funcs import create_directory, visualize_dataset
 from core.dataset_preprocessing import DatasetPreprocessing
@@ -94,16 +95,16 @@ mask_id_to_color = {0: (0, 0, 0),     # BGR
                     7: (255, 255, 0)}
 class_weights={0: 2.,
                1: 1.,
-               2: 5.,
+               2: 10.,
                3: 30.,
-               4: 10.,
-               5: 10.,
-               6: 30.,
-               7: 30.}
+               4: 40.,
+               5: 40.,
+               6: 70.,
+               7: 70.}
 for i in range(np.shape(class_id_reduction)[0]):
     mask_id_to_color.pop(class_id_reduction[i][0])
     class_weights.pop(class_id_reduction[i][0])
-
+class_weights = list(class_weights.values())
 
 current_dir = os.path.abspath(os.getcwd())
 data_dir = current_dir + '/capricum_annuum_dataset/'
@@ -155,16 +156,24 @@ for layer in model.layers:
     elif isinstance(layer, tf.keras.layers.Conv2D):
         layer.kernel_regularizer = tf.keras.regularizers.l2(1e-4)
 
+def weighted_categorical_crossentropy(weights):
+    def wcce(y_true, y_pred):
+        Kweights = K.constant(weights)
+        if not tf.is_tensor(y_pred): y_pred = K.constant(y_pred)
+        y_true = K.cast(y_true, y_pred.dtype)
+        return K.categorical_crossentropy(y_true, y_pred) * K.sum(y_true * Kweights, axis=-1)
+    return wcce
+
 optimizer = tf.keras.optimizers.Adam(learning_rate=5e-4)
-losses = tf.keras.losses.CategoricalCrossentropy(from_logits=True, name='caregorical crossentropy')
+losses = weighted_categorical_crossentropy(class_weights)
 metrics = [tf.keras.metrics.Accuracy(), 
            tf.keras.metrics.CategoricalAccuracy()]
-callbacks = tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
+callbacks = tf.keras.callbacks.EarlyStopping(monitor='val_categorical_accuracy', mode='max', verbose=1, patience=5)
 
 log_dir = current_dir + '/log/'
 create_directory(dir_path=log_dir)
 log_dir += datetime.datetime.now().strftime("%d-%m-%Y--%H-%M-%S")
-tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, write_graph=True,
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=True,
                                                       write_images=True, update_freq='batch')
 callbacks = [callbacks, tensorboard_callback]
 
@@ -174,10 +183,9 @@ model.compile(optimizer=optimizer,
 
 model.fit(train_dataset,
           epochs=epochs,
-          verbose=2,
+          verbose=1,
           callbacks=callbacks,
           validation_data=validation_dataset,
-          class_weight=class_weights,
           steps_per_epoch=len(train_img)//batch_size,
           validation_steps=len(validation_img)//batch_size,
           validation_freq=1)
@@ -214,7 +222,7 @@ for img_path in test_img[np.random.choice(len(test_img), 2, replace=False)]:
       mask[prediction==i] = mask_id_to_color[i]
   
   img_with_mask = img.copy()
-  cv2.addWeighted(src1=img, alpha=0.5, sr2=mask, beta=0.5, gamma=0, dts=img_with_mask)
+  cv2.addWeighted(src1=img, alpha=0.5, src2=mask, beta=0.5, gamma=0, dst=img_with_mask)
   
 
   fig = plt.figure(figsize = (10,10))
@@ -229,7 +237,7 @@ for img_path in test_img[np.random.choice(len(test_img), 2, replace=False)]:
   axs[1].imshow(img)
   axs[1].set_title('Original image')
   axs[2].imshow(mask)
-  axs[3].set_title('Predicted mask')
+  axs[2].set_title('Predicted mask')
   plt.show()
 
 

@@ -3,8 +3,9 @@ import warnings
 import tensorflow as tf
 from tensorflow.keras import backend
 from tensorflow.keras.layers import (Activation, AveragePooling2D,
-                                     BatchNormalization, Conv2D, Lambda,
-                                     ZeroPadding2D, concatenate)
+                                     BatchNormalization, Conv2D,
+                                     DepthwiseConv2D, Lambda, ZeroPadding2D,
+                                     concatenate)
 from tensorflow.keras.models import Model
 
 from DeeplabV3p.core.backbone import select_backbone
@@ -14,7 +15,9 @@ class DeeplabV3p():
   def __init__(self, backbone_model_name='ResNet50', img_size=(500,500,3), num_classes=10):
     self.backbone_model_name = backbone_model_name
 
-    if (backbone_model_name.lower() == 'mobilenetv2') and (img_size[0] != 224) and (img_size[1] != 224):
+    if (backbone_model_name.lower() == 'mobilenet') and (img_size[0] != 224) and (img_size[1] != 224):
+      raise NameError('img_size should be (331,331,3) while using NASNetLarge pretrained weights.')
+    elif (backbone_model_name.lower() == 'mobilenetv2') and (img_size[0] != 224) and (img_size[1] != 224):
       raise NameError('img_size should be (224,224,3) while using MobileNetV2 pretrained weights.')
     elif backbone_model_name.lower() == 'nasnetlarge' and (img_size[0] != 331) and (img_size[1] != 331):
       raise NameError('img_size should be (331,331,3) while using NASNetLarge pretrained weights.')
@@ -40,32 +43,48 @@ class DeeplabV3p():
                        'densenet169': ['pool4_relu', 'pool2_relu'],                         # 1280, 256
                        'densenet201': ['pool4_relu', 'pool2_relu'],                         # 1792, 256
                        'nasnetlarge': ['activation_180', 'activation_11']}                  # 672, 168
+  
+
+  def depthwise_separable_convolution(self, tensor, filters=256, kernel_size_depth=(3,3), kernel_size_point=(1,1),
+                                      dilation_rate=1, padding_depth='same', padding_point='same', 
+                                      use_bias_depth=False, use_bias_point=False, name='depthwise_separable_convolution'):
+
+    tensor = DepthwiseConv2D(kernel_size=kernel_size_depth, dilation_rate=dilation_rate, padding=padding_depth,
+                               name=name+'_depthwiseConv2d', use_bias=use_bias_depth)(tensor)
+    tensor = BatchNormalization(name=name+'_batchNorm_depth')(tensor)
+    tensor = Activation('elu', name=name+'_activation_depth')(tensor)
+    
+    tensor = Conv2D(filters=filters, kernel_size=kernel_size_point, dilation_rate=1, padding=padding_point,
+                      kernel_initializer='he_normal', name=name+'_poinwiseConv2d', use_bias=use_bias_point)(tensor)
+    tensor = BatchNormalization(name=name+'_batchNorm_point')(tensor)
+    tensor = Activation('elu', name=name+'_activation_point')(tensor)
+    return tensor
 
 
   def ASPP(self, backbone_tensor):
-    tensor_1 = Conv2D(filters=256, kernel_size=(1,1), dilation_rate=1, padding='same',
-                      kernel_initializer='he_normal', name='ASPP_conv2d_tensor_1', use_bias=False)(backbone_tensor)
-    tensor_1 = BatchNormalization(name='ASPP_batchNorm_tensor_1')(tensor_1)
-    tensor_1 = Activation('elu', name='ASPP_activation_tensor_1')(tensor_1)
+    tensor_1 = self.depthwise_separable_convolution(backbone_tensor, filters=256, kernel_size_depth=(1,1), 
+                                                    kernel_size_point=(1,1), dilation_rate=1, padding_depth='same', 
+                                                    padding_point='same', use_bias_depth=False, 
+                                                    use_bias_point=False, name='ASPP_tensor_1')
 
-    tensor_6 = Conv2D(filters=256, kernel_size=(3,3), dilation_rate=6, padding='same',
-                      kernel_initializer='he_normal', name='ASPP_conv2d_tensor_6', use_bias=False)(backbone_tensor)
-    tensor_6 = BatchNormalization(name='ASPP_batchNorm_tensor_6')(tensor_6)
-    tensor_6 = Activation('elu', name='ASPP_activation_tensor_6')(tensor_6)
+    tensor_6 = self.depthwise_separable_convolution(backbone_tensor, filters=256, kernel_size_depth=(3,3), 
+                                                    kernel_size_point=(1,1), dilation_rate=6, padding_depth='same', 
+                                                    padding_point='same', use_bias_depth=False, 
+                                                    use_bias_point=False, name='ASPP_tensor_6')
 
-    tensor_12 = Conv2D(filters=256, kernel_size=(3,3), dilation_rate=12, padding='same',
-                       kernel_initializer='he_normal', name='ASPP_conv2d_tensor_12', use_bias=False)(backbone_tensor)
-    tensor_12 = BatchNormalization(name='ASPP_batchNorm_tensor_12')(tensor_12)
-    tensor_12 = Activation('elu', name='ASPP_activation_tensor_12')(tensor_12)
+    tensor_12 = self.depthwise_separable_convolution(backbone_tensor, filters=256, kernel_size_depth=(3,3), 
+                                                     kernel_size_point=(1,1), dilation_rate=12, padding_depth='same', 
+                                                     padding_point='same', use_bias_depth=False, 
+                                                     use_bias_point=False, name='ASPP_tensor_12')
 
-    tensor_18 = Conv2D(filters=256, kernel_size=(3,3), dilation_rate=18, padding='same',
-                       kernel_initializer='he_normal', name='ASPP_conv2d_tensor_18', use_bias=False)(backbone_tensor)              
-    tensor_18 = BatchNormalization(name='ASPP_batchNorm_tensor_18')(tensor_18)
-    tensor_18 = Activation('elu', name='ASPP_activation_tensor_18')(tensor_18)
+    tensor_18 = self.depthwise_separable_convolution(backbone_tensor, filters=256, kernel_size_depth=(3,3), 
+                                                     kernel_size_point=(1,1), dilation_rate=18, padding_depth='same', 
+                                                     padding_point='same', use_bias_depth=False, 
+                                                     use_bias_point=False, name='ASPP_tensor_18')
 
     dim = backend.int_shape(backbone_tensor)
     tensor_pool = AveragePooling2D(pool_size=(dim[1], dim[2]), name = 'ASPP_avgPooling_tensor_pool')(backbone_tensor)
-    tensor_pool = Conv2D(filters=256, kernel_size= (3,3), dilation_rate=1, padding='same',
+    tensor_pool = Conv2D(filters=256, kernel_size= (1,1), dilation_rate=1, padding='same',
                          kernel_initializer='he_normal', name='ASPP_conv2d_tensor_pool', use_bias=False)(tensor_pool)
     tensor_pool = BatchNormalization(name='ASPP_batchNorm_tensor_pool')(tensor_pool)
     tensor_pool = Activation('elu', name='ASPP_activation_tensor_pool')(tensor_pool)
@@ -89,15 +108,15 @@ class DeeplabV3p():
 
     tensor = concatenate([aspp_tensor, backbone_tensor], name='decoder_concatenate')
 
-    tensor = Conv2D(filters=256, kernel_size=(3,3), dilation_rate=1, padding='same',
-                    kernel_initializer='he_normal', name='decoder_conv2d_x', use_bias=False)(tensor)
-    tensor = BatchNormalization(name='decoder_batchNorm_1')(tensor)
-    tensor = Activation('elu', name='decoder_activation_1')(tensor)
+    tensor = self.depthwise_separable_convolution(tensor, filters=256, kernel_size_depth=(3,3), 
+                                                  kernel_size_point=(1,1), dilation_rate=1, padding_depth='same', 
+                                                  padding_point='same', use_bias_depth=False, 
+                                                  use_bias_point=False, name='decoder_1')
 
-    tensor = Conv2D(filters=256, kernel_size=(3,3), dilation_rate=1, padding='same',
-                    kernel_initializer='he_normal', name='decoder_conv2d_x2', use_bias=False)(tensor)
-    tensor = BatchNormalization(name='decoder_batchNorm_2')(tensor)
-    tensor = Activation('elu', name='decoder_activation_2')(tensor)
+    tensor = self.depthwise_separable_convolution(tensor, filters=256, kernel_size_depth=(3,3), 
+                                                  kernel_size_point=(1,1), dilation_rate=1, padding_depth='same', 
+                                                  padding_point='same', use_bias_depth=False, 
+                                                  use_bias_point=False, name='decoder_2')
 
     size = [self.h, self.w]
     tensor = Lambda(lambda x: tf.image.resize(images=x, size=size), output_shape=size, 

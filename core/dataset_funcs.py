@@ -29,7 +29,7 @@ def increase_brightness(img, value=0):
   return img
 
 
-def visualize_dataset(img_path, mask_path, num_classes=8, shape=(4,4), name='Visualizing image and mask'):
+def visualize_dataset(img_path, mask_path, num_classes=8, shape=(2,4), name='Visualizing image and mask'):
   img = cv2.imread(img_path)
   img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
   mask = cv2.imread(mask_path)
