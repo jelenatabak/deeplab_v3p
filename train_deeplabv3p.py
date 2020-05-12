@@ -217,6 +217,15 @@ for img_path in test_img[np.random.choice(len(test_img), 2, replace=False)]:
   prediction = np.squeeze(prediction)                   # Shape (h, w, channels)
   prediction = np.argmax(prediction, axis=2)            # Shape (index_of_class)
 
+  name = test_mask_dir + img_path.split('/')[-1]
+  ground_truth = cv2.imread(name)
+  iou = []
+  for i in range(num_of_classes):
+    intersection = np.logical_and(prediction==i, ground_truth==i)
+    union = np.logical_or(prediction==i, ground_truth==i)
+    iou.append(np.sum(intersection) / np.sum(union))
+  print(iou)
+
   mask = img.copy()
   for i in mask_id_to_color:
       mask[prediction==i] = mask_id_to_color[i]
