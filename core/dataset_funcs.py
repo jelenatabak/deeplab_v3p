@@ -29,6 +29,22 @@ def increase_brightness(img, value=0):
   return img
 
 
+def calculate_weights_for_classes(path_to_masks, num_classes=6):
+  weights = np.zeros(num_classes)
+  pixels_per_class = np.zeros(num_classes)
+
+  for name in path_to_masks:
+    mask = cv2.imread(name)
+    for i in range(num_classes):
+      pixels_per_class[i] = np.sum(mask[:,:,0]==i)
+    weights += pixels_per_class/(mask.shape[0]*mask.shape[1])
+
+  weights = (len(path_to_masks)/weights)
+  weights[np.isinf(weights)] = 0
+  weights = weights/weights.min()
+  return weights
+
+
 def visualize_dataset(img_path, mask_path, num_classes=8, shape=(2,4), name='Visualizing image and mask'):
   img = cv2.imread(img_path)
   img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

@@ -8,7 +8,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-from core.dataset_funcs import create_directory, visualize_dataset
+from core.dataset_funcs import (calculate_weights_for_classes,
+                                create_directory, visualize_dataset)
 from core.dataset_preprocessing import DatasetPreprocessing
 from core.deeplabv3p_model import DeeplabV3p
 
@@ -65,6 +66,7 @@ flags = tf.compat.v1.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('preprocess_dataset', False, 'Preprocess dataset before fiting model.')
+flags.DEFINE_boolean('class_weights', False, 'Calculate class weights for training.')
 flags.DEFINE_integer('batch_size', 16, 'Model batch size.')
 flags.DEFINE_integer('brightness_value', 50, 'Increasing brightness of image in dataset preprocessing by value of.')
 flags.DEFINE_integer('num_of_classes', 6, 'Number of different masks.')
@@ -93,18 +95,8 @@ mask_id_to_color = {0: (0, 0, 0),     # BGR
                     5: (76, 254, 0),
                     6: (254, 254, 254),
                     7: (255, 255, 0)}
-class_weights={0: 2.,
-               1: 1.,
-               2: 10.,
-               3: 30.,
-               4: 40.,
-               5: 40.,
-               6: 70.,
-               7: 70.}
 for i in range(np.shape(class_id_reduction)[0]):
     mask_id_to_color.pop(class_id_reduction[i][0])
-    class_weights.pop(class_id_reduction[i][0])
-class_weights = list(class_weights.values())
 
 current_dir = os.path.abspath(os.getcwd())
 data_dir = current_dir + '/capricum_annuum_dataset/'
@@ -133,6 +125,12 @@ test_mask = np.array([os.path.join(test_mask_dir, mask_name) for mask_name in os
 print('Number of images in training folder: {}'.format(len(train_img)))
 print('Number of images in validation folder: {}'.format(len(validation_img)))
 print('Number of images in test folder: {}'.format(len(test_img)))
+
+
+if FLAGS.class_weights:
+  class_weights = calculate_weights_for_classes(path_to_masks=train_mask, num_classes=num_of_classes)
+else:
+  class_weights = [2.20770018, 1., 5.76543898, 240.53078806, 11.79186119, 9.29862377]
 
 
 # Visualize first image and corresponding mask in training set
@@ -221,8 +219,8 @@ for img_path in test_img[np.random.choice(len(test_img), 2, replace=False)]:
   ground_truth = cv2.imread(name)
   iou = []
   for i in range(num_of_classes):
-    intersection = np.logical_and(prediction==i, ground_truth==i)
-    union = np.logical_or(prediction==i, ground_truth==i)
+    intersection = np.logical_and(prediction==i, ground_truth[:,:,0]==i)
+    union = np.logical_or(prediction==i, ground_truth[:,:,0]==i)
     iou.append(np.sum(intersection) / np.sum(union))
   print(iou)
 
