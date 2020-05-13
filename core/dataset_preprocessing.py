@@ -80,8 +80,8 @@ class DatasetPreprocessing():
     for dir_path in splited_data_directories:
       create_directory(dir_path)
     
-    img_names = np.array([os.path.join(self.img_dir, img_name) for img_name in os.listdir(self.img_dir)])
-    mask_names = np.array([os.path.join(self.mask_dir, mask_name) for mask_name in os.listdir(self.mask_dir)])
+    img_names = np.sort(np.array([os.path.join(self.img_dir, img_name) for img_name in os.listdir(self.img_dir)]))
+    mask_names = np.sort(np.array([os.path.join(self.mask_dir, mask_name) for mask_name in os.listdir(self.mask_dir)]))
 
     visualize_dataset(img_path=img_names[0], mask_path=mask_names[0], num_classes=self.num_classes, 
                       name='Visualizing raw image and mask')
@@ -104,8 +104,8 @@ class DatasetPreprocessing():
                        mask_dir=(train_mask_dir, test_mask_dir), size=self.test_size)
     print('Spliting dataset successfully ended.')
 
-    visualize_dataset(img_path=train_img_dir + os.listdir(train_img_dir)[0],
-                      mask_path=train_mask_dir + os.listdir(train_mask_dir)[0],
+    visualize_dataset(img_path=train_img_dir + np.sort(os.listdir(train_img_dir))[0],
+                      mask_path=train_mask_dir + np.sort(os.listdir(train_mask_dir))[0],
                       shape=(2,3), num_classes=self.num_classes, 
                       name='Visualizing processed image and mask')
 

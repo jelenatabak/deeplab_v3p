@@ -115,12 +115,12 @@ validation_mask_dir = data_dir + 'validation/masks/'
 test_img_dir = data_dir + 'test/images/'
 test_mask_dir = data_dir + 'test/masks/'
 
-train_img = np.array([os.path.join(train_img_dir, img_name) for img_name in os.listdir(train_img_dir)])
-train_mask = np.array([os.path.join(train_mask_dir, mask_name) for mask_name in os.listdir(train_mask_dir)])
-validation_img = np.array([os.path.join(validation_img_dir, img_name) for img_name in os.listdir(validation_img_dir)])
-validation_mask = np.array([os.path.join(validation_mask_dir, mask_name) for mask_name in os.listdir(validation_mask_dir)])
-test_img = np.array([os.path.join(test_img_dir, img_name) for img_name in os.listdir(test_img_dir)])
-test_mask = np.array([os.path.join(test_mask_dir, mask_name) for mask_name in os.listdir(test_mask_dir)])
+train_img = np.sort(np.array([os.path.join(train_img_dir, img_name) for img_name in os.listdir(train_img_dir)]))
+train_mask = np.sort(np.array([os.path.join(train_mask_dir, mask_name) for mask_name in os.listdir(train_mask_dir)]))
+validation_img = np.sort(np.array([os.path.join(validation_img_dir, img_name) for img_name in os.listdir(validation_img_dir)]))
+validation_mask = np.sort(np.array([os.path.join(validation_mask_dir, mask_name) for mask_name in os.listdir(validation_mask_dir)]))
+test_img = np.sort(np.array([os.path.join(test_img_dir, img_name) for img_name in os.listdir(test_img_dir)]))
+test_mask = np.sort(np.array([os.path.join(test_mask_dir, mask_name) for mask_name in os.listdir(test_mask_dir)]))
 
 print('Number of images in training folder: {}'.format(len(train_img)))
 print('Number of images in validation folder: {}'.format(len(validation_img)))
