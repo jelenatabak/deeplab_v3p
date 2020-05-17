@@ -11,7 +11,7 @@ from tensorflow.keras import backend as K
 from core.dataset_funcs import (calculate_weights_for_classes,
                                 create_directory, visualize_dataset)
 from core.dataset_preprocessing import DatasetPreprocessing
-from core.deeplabv3p_model import DeeplabV3p
+from core.deeplabv3p_model import create_model
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
@@ -24,16 +24,11 @@ if gpus:
     print(e)
 
 
-# To-do: Improve last visualization by using class for inference -> after it is created
-#        Add evaluation
-
-
 from_tensor_slices = tf.data.Dataset.from_tensor_slices
 decode_png = tf.image.decode_png
 resize = tf.image.resize
 read_file = tf.io.read_file
 AUTOTUNE = tf.data.experimental.AUTOTUNE
-
 
 def load_dataset(image, mask, num_classes, size=(500,500)):
   img = read_file(image)
@@ -56,10 +51,9 @@ def dataset_pipeline(images, masks, batch_size, num_classes, size=(500,500)):
   dataset = dataset.shuffle(buffer_size=200)
   dataset = dataset.map(lambda x,y: load_dataset(x, y, num_classes, size), num_parallel_calls=AUTOTUNE)
   dataset = dataset.batch(batch_size=batch_size, drop_remainder=True)
-  dataset = dataset.repeat(5)
+  dataset = dataset.repeat()
   dataset = dataset.prefetch(AUTOTUNE)
   return dataset
-
 
 
 flags = tf.compat.v1.flags
@@ -67,10 +61,10 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('preprocess_dataset', False, 'Preprocess dataset before fiting model.')
 flags.DEFINE_boolean('class_weights', False, 'Calculate class weights for training.')
-flags.DEFINE_integer('batch_size', 16, 'Model batch size.')
+flags.DEFINE_integer('batch_size', 10, 'Model batch size.')
 flags.DEFINE_integer('brightness_value', 50, 'Increasing brightness of image in dataset preprocessing by value of.')
 flags.DEFINE_integer('num_of_classes', 6, 'Number of different masks.')
-flags.DEFINE_integer('epochs', 1000, 'Epochs')
+flags.DEFINE_integer('epochs', 200, 'Epochs')
 flags.DEFINE_list('image_shape', '500,500,3', 'Shape of input image for model.')
 flags.DEFINE_list('dataset_split_size', '7500,2500,500', 'Number of images in training, validation and test sets.')
 flags.DEFINE_string('backbone_model', 'ResNet50', 'Backbone model for DeeplabV3+.')
@@ -87,14 +81,14 @@ image_shape = tuple(image_shape)
 dataset_split_size = [int(values) for values in FLAGS.dataset_split_size]
 epochs = FLAGS.epochs
 class_id_reduction = ((6,4),(7,4))
-mask_id_to_color = {0: (0, 0, 0),     # BGR
-                    1: (245, 49, 0),
-                    2: (82, 252, 255),
-                    3: (30, 0, 255),
-                    4: (243, 22, 255),
-                    5: (76, 254, 0),
+mask_id_to_color = {0: (0, 0, 0),     # RGB
+                    1: (0, 49, 245),
+                    2: (255, 252, 82),
+                    3: (255, 0, 30),
+                    4: (255, 22, 243),
+                    5: (0, 254, 76),
                     6: (254, 254, 254),
-                    7: (255, 255, 0)}
+                    7: (0, 255, 255)}
 for i in range(np.shape(class_id_reduction)[0]):
     mask_id_to_color.pop(class_id_reduction[i][0])
 
@@ -145,8 +139,7 @@ test_dataset = dataset_pipeline(images=test_img, masks=test_mask, batch_size=bat
 
 
 # Create model, define model parameters and fit model
-deeplab = DeeplabV3p(backbone_model_name=FLAGS.backbone_model, img_size=image_shape, num_classes=num_of_classes) 
-model = deeplab.create_model()
+model = create_model(backbone_model_name=FLAGS.backbone_model, img_size=image_shape, num_classes=num_of_classes) 
 
 for layer in model.layers:
     if isinstance(layer, tf.keras.layers.BatchNormalization):
@@ -164,15 +157,14 @@ def weighted_categorical_crossentropy(weights):
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=5e-4)
 losses = weighted_categorical_crossentropy(class_weights)
-metrics = [tf.keras.metrics.Accuracy(), 
-           tf.keras.metrics.CategoricalAccuracy()]
+metrics = [tf.keras.metrics.CategoricalAccuracy()]
 callbacks = tf.keras.callbacks.EarlyStopping(monitor='val_categorical_accuracy', mode='max', verbose=1, patience=5)
 
 log_dir = current_dir + '/log/'
 create_directory(dir_path=log_dir)
 log_dir += datetime.datetime.now().strftime("%d-%m-%Y--%H-%M-%S")
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=True,
-                                                      write_images=True, update_freq='batch')
+                                                      write_images=False, update_freq='batch')
 callbacks = [callbacks, tensorboard_callback]
 
 model.compile(optimizer=optimizer,
@@ -204,8 +196,9 @@ print('Model is successfully saved to {} location.'.format(model_dir))
 imagenet_normalization = [103.939, 116.779, 123.68]
 
 for img_path in test_img[np.random.choice(len(test_img), 2, replace=False)]:
-  img = cv2.imread(img_path)    # BGR
+  img = cv2.imread(img_path).astype(np.float32)         # BGR
   img_process = img.copy()
+  img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
   img_process[:,:,0] -= imagenet_normalization[0]
   img_process[:,:,1] -= imagenet_normalization[1]
   img_process[:,:,2] -= imagenet_normalization[2]
@@ -234,16 +227,16 @@ for img_path in test_img[np.random.choice(len(test_img), 2, replace=False)]:
 
   fig = plt.figure(figsize = (10,10))
   axs = np.zeros(3, dtype=object)
-  gs = fig.add_gridspec(4, 4, height_ratios=[2,2,2,2])
+  gs = fig.add_gridspec(4, 4)
   axs[0] = fig.add_subplot(gs[0:2,1:3])
   axs[1] = fig.add_subplot(gs[2:4,0:3])
   axs[2] = fig.add_subplot(gs[2:4,2:4])
   
-  axs[0].imshow(img_with_mask)
+  axs[0].imshow(img_with_mask/255)
   axs[0].set_title('Original image with predicted mask')
-  axs[1].imshow(img)
+  axs[1].imshow(img/255)
   axs[1].set_title('Original image')
-  axs[2].imshow(mask)
+  axs[2].imshow(mask/255)
   axs[2].set_title('Predicted mask')
   plt.show()
 
