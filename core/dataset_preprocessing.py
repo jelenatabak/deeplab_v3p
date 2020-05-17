@@ -84,7 +84,7 @@ class DatasetPreprocessing():
     mask_names = np.sort(np.array([os.path.join(self.mask_dir, mask_name) for mask_name in os.listdir(self.mask_dir)]))
 
     visualize_dataset(img_path=img_names[0], mask_path=mask_names[0], num_classes=self.num_classes, 
-                      name='Visualizing raw image and mask')
+                      name='Visualizing raw image and corresponding masks')
 
     print('Processing image files...')
     for name in img_names:
@@ -94,7 +94,7 @@ class DatasetPreprocessing():
     print('Processing mask files...')
     for name in mask_names:
       self.img_process(path=name, mask=True, output_dir=train_mask_dir)
-    self.num_classes -= self.class_id.shape[0]
+    self.num_classes = self.get_number_of_clasess()
     print('Processing mask files successfully ended.')
 
     print('Started spliting dataset...')
@@ -107,7 +107,7 @@ class DatasetPreprocessing():
     visualize_dataset(img_path=train_img_dir + np.sort(os.listdir(train_img_dir))[0],
                       mask_path=train_mask_dir + np.sort(os.listdir(train_mask_dir))[0],
                       shape=(2,3), num_classes=self.num_classes, 
-                      name='Visualizing processed image and mask')
+                      name='Visualizing preprocessed image and corresponding masks')
 
 
 
