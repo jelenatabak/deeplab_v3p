@@ -28,6 +28,10 @@ from_tensor_slices = tf.data.Dataset.from_tensor_slices
 decode_png = tf.image.decode_png
 resize = tf.image.resize
 read_file = tf.io.read_file
+rand_brightness = tf.image.random_brightness
+rand_saturation = tf.image.random_saturation
+rand_hue = tf.image.random_hue
+rand_contrast = tf.image.random_contrast
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 def load_dataset(image, mask, num_classes, size=(500,500)):
@@ -35,6 +39,10 @@ def load_dataset(image, mask, num_classes, size=(500,500)):
   img = decode_png(contents=img, channels=3)  # output is RGB
   img = resize(images=img, size=size)
   img = tf.cast(x=img, dtype=tf.float32)
+  img = rand_brightness(img, 0.2)
+  img = rand_saturation(img, lower=0.5, upper=1.5)
+  img = rand_hue(img, 0.2)
+  img = rand_contrast(img, lower=0.5, upper=1.5)
   imagenet_normalization = tf.constant([103.939, 116.779, 123.68]) # For normalization data around the ImageNet mean (BGR) on which the classifier was initialy trained
   img = img[:,:,::-1] - imagenet_normalization
 
