@@ -3,7 +3,9 @@ import os
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import rospkg
 import tensorflow as tf
+
 from core.deeplabv3p_model import create_model
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
@@ -74,7 +76,8 @@ class DeeplabInference():
 
 
 if __name__=='__main__':
-  current_dir = os.path.abspath(os.getcwd())
+  rospack = rospkg.RosPack()
+  current_dir = rospack.get_path('deeplab_v3p')
   model_path = current_dir + '/tensorflow_models/model_1'
   data_dir = current_dir + '/dataset/capricum_annuum_dataset/'
   test_img_dir = data_dir + 'test/images/'

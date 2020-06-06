@@ -5,13 +5,14 @@ import random
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import rospkg
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-from core.dataset_funcs import (calculate_weights_for_classes,
+from scripts.core.dataset_funcs import (calculate_weights_for_classes,
                                 create_directory, visualize_dataset)
-from core.dataset_preprocessing import DatasetPreprocessing
-from core.deeplabv3p_model import create_model
+from scripts.core.dataset_preprocessing import DatasetPreprocessing
+from scripts.core.deeplabv3p_model import create_model
 from run_deeplab import DeeplabInference
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
@@ -100,7 +101,9 @@ mask_id_to_color = {0: (0, 0, 0),     # RGB
 for i in range(np.shape(class_id_reduction)[0]):
     mask_id_to_color.pop(class_id_reduction[i][0])
 
-current_dir = os.path.abspath(os.getcwd())
+
+rospack = rospkg.RosPack()
+current_dir = rospack.get_path('deeplab_v3p')
 data_dir = current_dir + '/dataset/capricum_annuum_dataset/'
 
 if FLAGS.preprocess_dataset:
@@ -193,13 +196,13 @@ model.fit(train_dataset,
 
 # Save model
 print('Saving model...')
-model_dir = current_dir + '/model/'
+model_dir = current_dir + '/tensorflow_models/'
 create_directory(dir_path=model_dir)
 model_dir += datetime.datetime.now().strftime("%d-%m-%Y--%H-%M-%S")
 model_path = model_dir
 model.save(model_dir)
 
-model_dir = current_dir + '/model/weights_'
+model_dir = current_dir + '/tensorflow_models/weights_'
 model_dir += datetime.datetime.now().strftime("%d-%m-%Y--%H-%M-%S")
 model_dir += '/weights'
 model.save_weights(model_dir)
@@ -230,3 +233,4 @@ input('Press ENTER to exit')
 # test_dataset = tf.data.Dataset.from_tensor_slices((test_examples, test_labels))
 # test_dataset = test_dataset.batch(BATCH_SIZE)
 # model.evaluate(test_dataset)
+
