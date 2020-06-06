@@ -14,7 +14,6 @@ from core.dataset_preprocessing import DatasetPreprocessing
 from core.deeplabv3p_model import create_model
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
-
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
   try:
@@ -101,7 +100,7 @@ for i in range(np.shape(class_id_reduction)[0]):
     mask_id_to_color.pop(class_id_reduction[i][0])
 
 current_dir = os.path.abspath(os.getcwd())
-data_dir = current_dir + '/capricum_annuum_dataset/'
+data_dir = current_dir + '/dataset/capricum_annuum_dataset/'
 
 if FLAGS.preprocess_dataset:
   data_preprocess = DatasetPreprocessing(img_dir=FLAGS.img_dir, mask_dir=FLAGS.mask_dir, output_dir=data_dir, 
@@ -196,7 +195,10 @@ create_directory(dir_path=model_dir)
 model_dir += datetime.datetime.now().strftime("%d-%m-%Y--%H-%M-%S")
 model.save(model_dir)
 
-model.save_weights(model_dir + '_weights')
+model_dir = current_dir + '/model/weights/'
+create_directory(dir_path=model_dir)
+model_dir += datetime.datetime.now().strftime("%d-%m-%Y--%H-%M-%S")
+model.save_weights(model_dir)
 print('Model is successfully saved to {} location.'.format(model_dir))
 
 

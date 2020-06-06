@@ -8,7 +8,7 @@ from tensorflow.keras.layers import (Activation, AveragePooling2D,
                                      concatenate)
 from tensorflow.keras.models import Model
 
-from DeeplabV3p.core.backbone import select_backbone
+from scripts.core.backbone import select_backbone
 
 
 def related_name_and_size(model_name='ResNet50', size=(500,500,3)):
@@ -139,7 +139,6 @@ def create_model(backbone_model_name='ResNet50', img_size=(500,500,3), num_class
                          img_size=img_size, num_classes=num_classes)
   model = Model(inputs=backbone_model.input, outputs=output_layer, name = 'DeeplabV3p')
   return model
-
 
 
 

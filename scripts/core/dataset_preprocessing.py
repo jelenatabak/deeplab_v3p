@@ -4,7 +4,7 @@ from copy import deepcopy
 import cv2
 import numpy as np
 
-from DeeplabV3p.core.dataset_funcs import (create_directory, increase_brightness,
+from scripts.core.dataset_funcs import (create_directory, increase_brightness,
                            visualize_dataset)
 
 
@@ -108,6 +108,7 @@ class DatasetPreprocessing():
                       mask_path=train_mask_dir + np.sort(os.listdir(train_mask_dir))[0],
                       shape=(2,3), num_classes=self.num_classes, 
                       name='Visualizing preprocessed image and corresponding masks')
+
 
 
 

@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="deeplab_v3p" type="run_deeplab_ros.py" name="run_deeplab_ros" output="screen">
+    <remap from="/image_raw" to="/image_publisher_1591450743840569433/image_raw"/>
+  </node>
+</launch>
