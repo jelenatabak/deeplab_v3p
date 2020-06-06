@@ -12,6 +12,7 @@ from core.dataset_funcs import (calculate_weights_for_classes,
                                 create_directory, visualize_dataset)
 from core.dataset_preprocessing import DatasetPreprocessing
 from core.deeplabv3p_model import create_model
+from run_deeplab import DeeplabInference
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -162,10 +163,12 @@ def weighted_categorical_crossentropy(weights):
         return K.categorical_crossentropy(y_true, y_pred) * K.sum(y_true * Kweights, axis=-1)
     return wcce
 
+
 optimizer = tf.keras.optimizers.Adam(learning_rate=5e-4)
-losses = weighted_categorical_crossentropy(class_weights)
+#losses = weighted_categorical_crossentropy(class_weights)
+losses = tf.keras.losses.CategoricalCrossentropy(from_logits=True, name='caregorical_crossentropy')
 metrics = [tf.keras.metrics.CategoricalAccuracy()]
-callbacks = tf.keras.callbacks.EarlyStopping(monitor='val_categorical_accuracy', mode='max', verbose=1, patience=5)
+callbacks = tf.keras.callbacks.EarlyStopping(monitor='val_categorical_accuracy', mode='max', verbose=1, patience=10, restore_best_weights=True)
 
 log_dir = current_dir + '/log/'
 create_directory(dir_path=log_dir)
@@ -193,63 +196,23 @@ print('Saving model...')
 model_dir = current_dir + '/model/'
 create_directory(dir_path=model_dir)
 model_dir += datetime.datetime.now().strftime("%d-%m-%Y--%H-%M-%S")
+model_path = model_dir
 model.save(model_dir)
 
-model_dir = current_dir + '/model/weights/'
-create_directory(dir_path=model_dir)
+model_dir = current_dir + '/model/weights_'
 model_dir += datetime.datetime.now().strftime("%d-%m-%Y--%H-%M-%S")
+model_dir += '/weights'
 model.save_weights(model_dir)
 print('Model is successfully saved to {} location.'.format(model_dir))
 
 
 # Testing model on two random image in test set
-imagenet_normalization = [103.939, 116.779, 123.68]
+deeplab_predict = DeeplabInference(model_path, ros_structure=False)
 
 for img_path in test_img[np.random.choice(len(test_img), 2, replace=False)]:
-  img = cv2.imread(img_path).astype(np.float32)         # BGR
-  img_process = img.copy()
-  img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-  img_process[:,:,0] -= imagenet_normalization[0]
-  img_process[:,:,1] -= imagenet_normalization[1]
-  img_process[:,:,2] -= imagenet_normalization[2]
-  img_process = np.expand_dims(img_process, axis=0)
-
-  prediction = model.predict(img_process)               # Shape (batch, h, w, channels)
-  prediction = np.squeeze(prediction)                   # Shape (h, w, channels)
-  prediction = np.argmax(prediction, axis=2)            # Shape (index_of_class)
-
-  name = test_mask_dir + img_path.split('/')[-1]
-  ground_truth = cv2.imread(name)
-  iou = []
-  for i in range(num_of_classes):
-    intersection = np.logical_and(prediction==i, ground_truth[:,:,0]==i)
-    union = np.logical_or(prediction==i, ground_truth[:,:,0]==i)
-    iou.append(np.sum(intersection) / np.sum(union))
-  print(iou)
-
-  mask = img.copy()
-  for i in mask_id_to_color:
-      mask[prediction==i] = mask_id_to_color[i]
-  
-  img_with_mask = img.copy()
-  cv2.addWeighted(src1=img, alpha=0.5, src2=mask, beta=0.5, gamma=0, dst=img_with_mask)
-  
-
-  fig = plt.figure(figsize = (10,10))
-  axs = np.zeros(3, dtype=object)
-  gs = fig.add_gridspec(4, 4)
-  axs[0] = fig.add_subplot(gs[0:2,1:3])
-  axs[1] = fig.add_subplot(gs[2:4,0:3])
-  axs[2] = fig.add_subplot(gs[2:4,2:4])
-  
-  axs[0].imshow(img_with_mask/255)
-  axs[0].set_title('Original image with predicted mask')
-  axs[1].imshow(img/255)
-  axs[1].set_title('Original image')
-  axs[2].imshow(mask/255)
-  axs[2].set_title('Predicted mask')
-  plt.show()
-
+  img = cv2.imread(img_path).astype(np.float32)
+  deeplab_predict.predict(img)
+input('Press ENTER to exit')
 
 
 
