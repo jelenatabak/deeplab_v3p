@@ -1,6 +1,19 @@
 core/__pycache__/
+__pycache__/
+.vscode/
+*.pyc
+scripts/To-do.py
 
 # capsicum_annuum_dataset
-capricum_annuum_dataset/*
-.vscode/
-__pycache__/
+dataset/capricum_annuum_dataset/*
+!*/dataset/capricum_annuum_dataset/test/images/10.png
+!*/dataset/capricum_annuum_dataset/test/masks/10.png
+!*/dataset/capricum_annuum_dataset/train/images/2.png
+!*/dataset/capricum_annuum_dataset/train/masks/2.png
+!*/dataset/capricum_annuum_dataset/validation/images/1.png
+!*/dataset/capricum_annuum_dataset/validation/masks/1.png
+
+# Saved tensorflow models
+tensorflow_models/*
+!*/tensorflow_models/model_1
+!*/tensorflow_models/model_1.png
