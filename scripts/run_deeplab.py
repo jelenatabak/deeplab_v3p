@@ -8,7 +8,7 @@ import tensorflow as tf
 
 from core.deeplabv3p_model import create_model
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
   try:
@@ -29,7 +29,7 @@ class DeeplabInference():
                              3: (255, 0, 30),
                              4: (255, 22, 243),
                              5: (0, 254, 76)}
-    
+
 
   def predict(self, img):
     img_process = img.copy()
@@ -63,7 +63,7 @@ class DeeplabInference():
     axs[0] = fig.add_subplot(gs[0:2,1:3])
     axs[1] = fig.add_subplot(gs[2:4,0:2])
     axs[2] = fig.add_subplot(gs[2:4,2:4])
-    
+
     axs[0].imshow(img_with_mask/255)
     axs[0].set_title('Original image with predicted mask')
     axs[1].imshow(img/255)
@@ -78,10 +78,10 @@ class DeeplabInference():
 if __name__=='__main__':
   rospack = rospkg.RosPack()
   current_dir = rospack.get_path('deeplab_v3p')
-  model_path = current_dir + '/tensorflow_models/model_1'
-  data_dir = current_dir + '/dataset/capricum_annuum_dataset/'
+  model_path = current_dir + '/tensorflow_models/basic_w_10'
+  data_dir = current_dir + '/dataset/synthetic_pepper/'
   test_img_dir = data_dir + 'test/images/'
-  
+
   test_img = np.sort(np.array([os.path.join(test_img_dir, img_name) for img_name in os.listdir(test_img_dir)]))
 
   deeplab_predict = DeeplabInference(model_path, ros_structure=False)

@@ -46,12 +46,13 @@ class DatasetPreprocessing():
 
   def img_process(self, path, output_dir, mask=False):
     img = cv2.imread(path)
-    img = self.crop_image(img)
+    #img = self.crop_image(img)
     if mask:
       img = self.reduce_num_of_classes(img)
     else:
-      img = increase_brightness(img, value=self.brightness_value)
-    cv2.imwrite(output_dir + path.split('_')[-1], img)
+      if self.brightness_value:
+        img = increase_brightness(img, value=self.brightness_value)
+    cv2.imwrite(output_dir + path.split('/')[-1], img)
 
 
   def split_dataset(self, img_dir, mask_dir, size):
@@ -59,8 +60,9 @@ class DatasetPreprocessing():
     rand_index = np.random.choice(name_array.shape[0], size, replace=False)
     try:
       for name in name_array[rand_index]:
+        mask_name = name.split('.')[0] + '.png'
         os.rename(img_dir[0] + name, img_dir[1] + name)
-        os.rename(mask_dir[0] + name, mask_dir[1] + name)
+        os.rename(mask_dir[0] + mask_name, mask_dir[1] + mask_name)
     except OSError as error:
       print(error)
 
@@ -106,7 +108,7 @@ class DatasetPreprocessing():
 
     visualize_dataset(img_path=train_img_dir + np.sort(os.listdir(train_img_dir))[0],
                       mask_path=train_mask_dir + np.sort(os.listdir(train_mask_dir))[0],
-                      shape=(2,3), num_classes=self.num_classes, 
+                      shape=(2,4), num_classes=self.num_classes, 
                       name='Visualizing preprocessed image and corresponding masks')
 
 
