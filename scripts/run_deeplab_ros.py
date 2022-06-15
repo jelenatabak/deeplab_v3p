@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import time
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 import cv2
 import matplotlib.pyplot as plt
@@ -21,7 +23,7 @@ class DeeplabROS():
       print(e)
 
     img = img.astype("float")
-    #img = img[:,80:560,:]
+    img = img[:,80:560,:]
     #img = cv2.resize(img, (640,640))
     mask = self.deeplab_predict.predict(img)
 
@@ -38,7 +40,7 @@ class DeeplabROS():
     self.bridge = CvBridge()
     self.deeplab_predict = DeeplabInference(model_path, ros_structure=True)
     rospy.sleep(10)
-    self.sub = rospy.Subscriber("/image_raw", Image, self.callback, queue_size=1, buff_size=2**24)
+    self.sub = rospy.Subscriber("/camera/color/image_raw", Image, self.callback, queue_size=1)
     self.mask_pub = rospy.Publisher('/segmentation_mask', Image, queue_size=1)
 
 

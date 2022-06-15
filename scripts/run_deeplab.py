@@ -9,6 +9,7 @@ import tensorflow as tf
 from core.deeplabv3p_model import create_model
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
   try:
@@ -78,16 +79,18 @@ class DeeplabInference():
 if __name__=='__main__':
   rospack = rospkg.RosPack()
   current_dir = rospack.get_path('deeplab_v3p')
-  model_path = current_dir + '/tensorflow_models/basic_w_10'
-  data_dir = current_dir + '/dataset/synthetic_pepper/'
-  test_img_dir = data_dir + 'test/images/'
+  model_path = current_dir + '/tensorflow_models/leaves_pepper_basic'
+  data_dir = current_dir + '/dataset/'
+  test_img_dir = data_dir + 'rgb/'
 
   test_img = np.sort(np.array([os.path.join(test_img_dir, img_name) for img_name in os.listdir(test_img_dir)]))
 
   deeplab_predict = DeeplabInference(model_path, ros_structure=False)
 
-  for img_path in test_img[np.random.choice(len(test_img), 2, replace=False)]:
+  #[np.random.choice(len(test_img), 2, replace=False)]
+  for img_path in test_img:
     img = cv2.imread(img_path).astype(np.float32)
+    img = img[:,80:560,:]
     deeplab_predict.predict(img)
 
   input('Press ENTER to exit')
